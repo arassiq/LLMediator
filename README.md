@@ -124,14 +124,12 @@ The frontend will now be accessible at http://localhost:8000.
 ```bash
 LLMediator/
 ├── backend/
-│   ├── app.py             # Main Flask application
+│   ├── core.py             # Main Flask application
 │   ├── requirements.txt    # Python dependencies
 │   ├── .env                # Environment file for API keys
-│   └── ...                 # Other backend files
+│   └── .gitignore          # only track necessary files
 ├── frontend/
-│   ├── index.html          # Main frontend HTML file
-│   ├── style.css           # CSS file
-│   ├── script.js           # JavaScript for WebSocket connections
+│   ├── frontend.html       # Main frontend HTML file
 │   └── ...                 # Other frontend files
 └── README.md               # Project documentation
 ```
