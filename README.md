@@ -84,7 +84,7 @@ You’ll need an OpenAI API key to use GPT-4. You can set it up using environmen
 5.	Run the Backend Server:
 After setting up the API key, start the backend server with:
     ```bash
-    python app.py
+    python core.py
     ```
 The server will now be available at http://localhost:5002.
 
