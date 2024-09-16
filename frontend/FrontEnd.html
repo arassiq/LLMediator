@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLMediator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: #2d2d2d;
+        }
+        .header {
+            padding: 20px;
+            text-align: center;
+            background-color: #3b3b3b;
+            border-bottom: 1px solid #444;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        .chat-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #2e2e2e;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-box div {
+            margin-bottom: 10px;
+        }
+        .chat-box .message {
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 60%;
+            word-wrap: break-word;
+            display: inline-block;
+        }
+        .chat-box .plaintiff {
+            background-color: #005f73;
+            color: #fff;
+            text-align: left;
+            margin-right: auto;
+        }
+        .chat-box .defendant {
+            background-color: #9b2226;
+            color: #fff;
+            text-align: right;
+            margin-left: auto;
+        }
+        .chat-box .mediator {
+            background-color: #3a86ff;
+            color: #fff;
+            text-align: center;
+            margin: 0 auto;
+        }
+        .input-container {
+            display: flex;
+            border-top: 1px solid #444;
+            padding: 15px;
+            background-color: #3b3b3b;
+        }
+        .input-container input {
+            flex-grow: 1;
+            padding: 12px;
+            background-color: #444;
+            color: #f5f5f5;
+            border: 1px solid #555;
+            border-radius: 5px;
+            margin-right: 10px;
+            outline: none;
+        }
+        .input-container input::placeholder {
+            color: #aaa;
+        }
+        .input-container button {
+            padding: 12px 20px;
+            background-color: #006d77;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .input-container button:hover {
+            background-color: #008c99;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #3b3b3b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        /* Add these classes for right/left alignment of bot/user answers */
+        .left {
+            text-align: left;
+            justify-content: flex-start;
+        }
+        .right {
+            text-align: right;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            LLMediator
+        </div>
+        <div class="chat-box" id="chat-box"></div>
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Type your message..." />
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        const socket = io('http://localhost:5002');  // Corrected connection
+
+        // User type (hardcoded for now, you can set dynamically later)
+        const userType = prompt("Are you the 'plaintiff' or 'defendant'?");
+        const userName = prompt("Enter your name:");
+        let mediationReady = false; // Track whether both parties have completed initial questions
+
+        socket.on('connect', () => {
+            // Register the user on connection
+            socket.emit('register_user', { user_type: userType, name: userName });
+        });
+
+        // Function to append messages to the chat box
+        function appendMessage(author, message, className) {
+            const chatBox = document.getElementById('chat-box');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', className);
+            messageDiv.innerHTML = `<strong>${author}:</strong> ${message}`;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to bottom
+        }
+
+        // Listen for AI responses (for both questions and mediation)
+        socket.on('ai_response', (data) => {
+            appendMessage('Mediator', data.ai_response, 'mediator');
+        });
+
+        // Listen for the next question (for initial questions)
+        socket.on('next_question', (data) => {
+            appendMessage('Mediator', data.next_question, 'mediator');
+        });
+
+        // Send user input to the server when "Send" button is clicked
+        document.getElementById('send-button').addEventListener('click', () => {
+            const input = document.getElementById('user-input').value;
+
+            if (input.trim() !== '') {
+                if (!mediationReady) {
+                    // If mediation is not ready, we're still in the question phase
+                    socket.emit('initial_questions', {
+                        user_type: userType,  // 'plaintiff' or 'defendant'
+                        answer: input         // User's answer to the current question
+                    });
+
+                    appendMessage(userName, input, userType === 'plaintiff' ? 'plaintiff' : 'defendant');
+                    document.getElementById('user-input').value = ''; // Clear input field
+
+                } else {
+                    // If mediation is ready, proceed with mediation phase
+                    socket.emit('mediate', {
+                        plaintiff_name: userType === 'plaintiff' ? userName : null,
+                        defendant_name: userType === 'defendant' ? userName : null,
+                        user_input: input
+                    });
+
+                    appendMessage(userName, input, userType === 'plaintiff' ? 'plaintiff' : 'defendant');
+                    document.getElementById('user-input').value = ''; // Clear input field
+                }
+            }
+        });
+
+        // Handle when both parties are ready for mediation
+        socket.on('ready_for_mediation', (data) => {
+            mediationReady = true; // Set flag to true, indicating mediation can begin
+            appendMessage('Mediator', 'Both parties have completed the initial questions. You can now begin mediation.', 'mediator');
+        });
+
+        // Listen for general messages from the mediator
+        socket.on('message', (data) => {
+            appendMessage('Mediator', data.message, 'mediator');
+        });
+    </script>
+</body>
+</html>
