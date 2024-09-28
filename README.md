@@ -15,7 +15,6 @@ Make sure you have the following installed on your machine:
 
 - [Python 3.x](https://www.python.org/downloads/)
 - [pip](https://pip.pypa.io/en/stable/installation/)
-- [Node.js](https://nodejs.org/) (for frontend, if needed for dependencies)
 
 ## Getting Started
 
